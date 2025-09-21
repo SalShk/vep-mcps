@@ -1,7 +1,5 @@
 from __future__ import annotations
 
-from typing import Annotated
-
 import pandas as pd
 import typer
 from rich.console import Console
@@ -12,55 +10,33 @@ app = typer.Typer(add_completion=False)
 console = Console()
 
 
-@app.command(name="run")
-def run(
-    in_tsv: Annotated[
-        str,
-        typer.Option(
-            ..., "--in-tsv", help="ANNOTATION_NORMALISED input (.tsv/.tsv.gz)"
-        ),
-    ],
-    constraint_tsv: Annotated[
-        str,
-        typer.Option(
-            ..., "--constraint-tsv", help="gnomAD constraint TSV (.tsv/.tsv.gz)"
-        ),
-    ],
-    out_tsv: Annotated[str, typer.Option(..., "--out-tsv", help="Output merged TSV")],
-    on: Annotated[
-        str,
-        typer.Option(
-            "gene_symbol", "--on", help="Join key: 'gene_symbol' or 'transcript'"
-        ),
-    ] = "gene_symbol",
-    how: Annotated[
-        str, typer.Option("left", "--how", help="Join type: 'left' or 'inner'")
-    ] = "left",
-    constraint_version: Annotated[
-        str | None,
-        typer.Option(
-            None, "--constraint-version", help="Provenance tag (e.g., gnomad-v4.1)"
-        ),
-    ] = None,
+@app.command()
+def main(
+    in_tsv: str = typer.Option(..., "--in-tsv", help="ANNOTATION_NORMALISED input TSV"),
+    constraint_tsv: str = typer.Option(
+        ..., "--constraint-tsv", help="gnomAD constraint TSV (.tsv or .tsv.gz)"
+    ),
+    on: str = typer.Option(
+        "gene_symbol", "--on", help="Join key: 'gene_symbol' or 'transcript'"
+    ),
+    how: str = typer.Option("left", "--how", help="Join type: 'left' or 'inner'"),
+    out_tsv: str = typer.Option(..., "--out-tsv", help="Output merged TSV"),
+    constraint_version: str | None = typer.Option(
+        None, "--constraint-version", help="Optional provenance tag (e.g., gnomad-v4.1)"
+    ),
 ) -> None:
     """
     Merge gnomAD constraint metrics onto normalised annotations.
-    Expects that the normalise step produced 'Gene_symbol' and/or 'Transcript'.
     """
     try:
-        how_lc = (how or "left").lower()
-        if how_lc not in {"left", "inner"}:
-            raise ValueError("--how must be 'left' or 'inner'")
+        with open_read(in_tsv) as f1, open_read(constraint_tsv) as f2:
+            ann = pd.read_csv(f1, sep="\t", dtype=str, low_memory=False)
+            cons = pd.read_csv(f2, sep="\t", dtype=str, low_memory=False)
 
-        on_lc = (on or "gene_symbol").lower()
-        if on_lc not in {"gene_symbol", "transcript"}:
-            raise ValueError("--on must be 'gene_symbol' or 'transcript'")
+        if on not in {"gene_symbol", "transcript"}:
+            raise ValueError("--on must be 'gene_symbol' or 'transcript'.")
 
-        with open_read(in_tsv) as f_ann, open_read(constraint_tsv) as f_con:
-            ann = pd.read_csv(f_ann, sep="\t", dtype=str, low_memory=False)
-            cons = pd.read_csv(f_con, sep="\t", dtype=str, low_memory=False)
-
-        if on_lc == "gene_symbol":
+        if on == "gene_symbol":
             key_ann, key_cons = "Gene_symbol", "gene_symbol"
             if key_ann not in ann.columns:
                 raise ValueError(
@@ -78,7 +54,7 @@ def run(
 
         merged = ann.merge(
             cons,
-            how=how_lc,
+            how=how,
             left_on=key_ann,
             right_on=key_cons,
             suffixes=("", "_constraint"),
@@ -91,12 +67,8 @@ def run(
             merged.to_csv(g, sep="\t", index=False)
 
         console.log(
-            f"[green]Merged ({how_lc}) on {key_ann} → {out_tsv}  (rows: {len(merged)})"
+            f"[green]Merged ({how}) on {key_ann} → {out_tsv}  (rows: {len(merged)})"
         )
     except Exception as e:
         console.log(f"[red]Error: {e}")
         raise typer.Exit(code=1) from e
-
-
-if __name__ == "__main__":
-    app()
