@@ -1,0 +1,20 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "VEP_RAW",
+  "type": "object",
+  "properties": {
+    "Location": { "type": "string" },
+    "Uploaded_variation": { "type": ["string","null"] },
+    "Allele": { "type": "string" },
+    "Feature": { "type": "string" },
+    "SYMBOL": { "type": ["string","null"] },
+    "Consequence": { "type": "string" },
+    "CANONICAL": { "type": ["string","null"] },
+    "MANE": { "type": ["string","null"] },
+    "MANE_SELECT": { "type": ["string","null"] },
+    "REVEL_score": { "type": ["number","string","null"] },
+    "CADD_PHRED": { "type": ["number","string","null"] },
+    "SpliceAI": { "type": ["string","null"] }
+  },
+  "required": ["Location","Allele","Feature","Consequence"]
+}
