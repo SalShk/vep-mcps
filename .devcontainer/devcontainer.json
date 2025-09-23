@@ -1,11 +1,14 @@
 {
   "name": "VEP MCP with Docker",
-  "image": "mcr.microsoft.com/devcontainers/python:0-3.12",
+  "image": "mcr.microsoft.com/devcontainers/python:3.12",
   "features": {
     "ghcr.io/devcontainers/features/docker-in-docker:2": {
       "version": "latest",
       "moby": true,
-      "dockerDashComposeVersion": "v2.24.5"
+      "dockerDashComposeVersion": "v2"
+    },
+    "ghcr.io/devcontainers/features/python:1": {
+      "version": "3.12"
     }
   },
   "customizations": {
@@ -18,11 +21,7 @@
       ]
     }
   },
-  "postCreateCommand": "pip install --upgrade pip && pip install -r requirements.txt",
+  "postCreateCommand": "pip install --upgrade pip && pip install -r /workspaces/vep-mcps/parser-mcp/requirements.txt",
   "remoteUser": "vscode",
-  "forwardPorts": [8080],
-  "runArgs": [
-    "--init",
-    "--userns=host"
-  ]
+  "runArgs": ["--init"]
 }
