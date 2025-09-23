@@ -1,73 +1,49 @@
 from __future__ import annotations
 
+from pathlib import Path
+from typing import Annotated
+
 import pandas as pd
 import typer
-from rich.console import Console
+from rich import print
 
-from ..io.gz import open_read, open_write
-
-app = typer.Typer(add_completion=False)
-console = Console()
-
-RENAME_MAP = {
-    "Feature": "Transcript",
-    "SYMBOL": "Gene_symbol",
-}
-
-NUMERIC_FIELDS = [
-    "REVEL_score",
-    "CADD_PHRED",
-    "dbNSFP_GERP",
-    "dbNSFP_phyloP",
-    "dbNSFP_phastCons",
-    "SpliceAI_DS_AG",
-    "SpliceAI_DS_AL",
-    "SpliceAI_DS_DG",
-    "SpliceAI_DS_DL",
-]
-
-
-@app.command()
 def main(
-    in_tsv: str = typer.Option(..., "--in-tsv", help="Input TSV (VEP_RAW or filtered)"),
-    out_tsv: str = typer.Option(
-        ..., "--out-tsv", help="Output TSV (ANNOTATION_NORMALISED)"
-    ),
-    vep_cache_version: str | None = typer.Option(
-        None, "--vep-cache-version", help="Optional VEP cache version"
-    ),
-    plugins_version: str | None = typer.Option(
-        None, "--plugins-version", help="Optional plugin bundle version"
-    ),
+    in_tsv: Annotated[
+        Path, typer.Option("--in-tsv", "-i", help="Input TSV file from VEP")
+    ],
+    out_tsv: Annotated[
+        Path, typer.Option("--out-tsv", "-o", help="Output TSV file")
+    ],
+    vep_cache_version: Annotated[
+        str, typer.Option("--vep-cache-version", "-v", help="VEP cache version")
+    ],
+    plugins_version: Annotated[
+        str, typer.Option("--plugins-version", "-p", help="VEP plugins version")
+    ],
 ) -> None:
-    """
-    Normalise column names and coerce plugin fields to numeric where applicable.
-    Adds optional provenance fields.
-    """
+    """Normalise VEP TSV columns and add version metadata."""
     try:
-        with open_read(in_tsv) as f:
-            df = pd.read_csv(f, sep="\t", dtype=str, low_memory=False)
+        print(f"[debug] Reading input: {in_tsv}")
+        df = pd.read_csv(in_tsv, sep="\t", dtype=str, low_memory=False)
 
-        # Rename standard columns
-        for old, new in RENAME_MAP.items():
-            if old in df.columns:
-                df.rename(columns={old: new}, inplace=True)
+        df.columns = [c.strip() for c in df.columns]
 
-        # Coerce numeric plugin fields if present
-        for col in NUMERIC_FIELDS:
-            if col in df.columns:
-                df[col] = pd.to_numeric(df[col], errors="coerce")
+        if "SYMBOL" in df.columns and "Gene_symbol" not in df.columns:
+            df["Gene_symbol"] = df["SYMBOL"]
+        elif "Gene_symbol" not in df.columns:
+            df["Gene_symbol"] = ""
+        if "Feature" in df.columns and "Transcript" not in df.columns:
+            df["Transcript"] = df["Feature"]
 
-        # Provenance
-        if vep_cache_version:
-            df["vep_cache_version"] = vep_cache_version
-        if plugins_version:
-            df["plugins_version"] = plugins_version
+        df["vep_cache_version"] = vep_cache_version
+        df["plugins_version"] = plugins_version
 
-        with open_write(out_tsv) as g:
-            df.to_csv(g, sep="\t", index=False)
-
-        console.log(f"[green]Normalised → {out_tsv}")
+        out_tsv.parent.mkdir(parents=True, exist_ok=True)
+        df.to_csv(out_tsv, sep="\t", index=False)
+        print(f"[green]Wrote {out_tsv}")
     except Exception as e:
-        console.log(f"[red]Error: {e}")
-        raise typer.Exit(code=1) from e
+        print(f"[red]Error: {e}")
+        raise typer.Exit(code=1) from None
+
+if __name__ == "__main__":
+    typer.run(main)
