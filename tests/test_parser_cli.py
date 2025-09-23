@@ -6,7 +6,7 @@ IMAGE = "vep-parser-mcp:0.1.0"
 TESTS = Path("/workspaces/vep-mcps/tests/data")
 
 
-def run_docker(args: list[str], tmp_path: Path) -> subprocess.CompletedProcess[str]:
+def run_docker(args, tmp_path):
     cmd = [
         "docker",
         "run",
@@ -22,32 +22,35 @@ def run_docker(args: list[str], tmp_path: Path) -> subprocess.CompletedProcess[s
     return subprocess.run(cmd, capture_output=True, text=True)
 
 
-def test_merge_runs(tmp_path: Path) -> None:
-    # Run filter and normalise steps to generate input
-    filtered_tsv = tmp_path / "filtered.tsv"
-    result_filter = run_docker(
+def test_01_filter_runs(tmp_path):
+    out_tsv = tmp_path / "filtered.tsv"
+    result = run_docker(
         [
             "vep-filter-consequence-mane",
             "--in-tsv",
             str(TESTS / "tiny.vep.tsv"),
             "--out-tsv",
-            str(filtered_tsv),
+            str(out_tsv),
             "--keep-consequence",
             "missense_variant,stop_gained",
         ],
         tmp_path,
     )
-    assert result_filter.returncode == 0, f"Filter failed: {result_filter.stderr}"
-    assert filtered_tsv.exists()
+    assert result.returncode == 0, f"Command failed: {result.stderr}"
+    assert out_tsv.exists()
+    assert out_tsv.stat().st_size > 0
 
-    normalised_tsv = tmp_path / "normalised.tsv"
-    result_normalise = run_docker(
+
+def test_02_normalise_runs(tmp_path):
+    in_tsv = tmp_path / "filtered.tsv"
+    out_tsv = tmp_path / "normalised.tsv"
+    result = run_docker(
         [
             "vep-normalise-columns",
             "--in-tsv",
-            str(filtered_tsv),
+            str(in_tsv),
             "--out-tsv",
-            str(normalised_tsv),
+            str(out_tsv),
             "--vep-cache-version",
             "110",
             "--plugins-version",
@@ -55,15 +58,20 @@ def test_merge_runs(tmp_path: Path) -> None:
         ],
         tmp_path,
     )
-    assert result_normalise.returncode == 0, f"Normalise failed: {result_normalise.stderr}"
-    assert normalised_tsv.exists()
+    assert result.returncode == 0, f"Command failed: {result.stderr}"
+    assert out_tsv.exists()
+    txt = out_tsv.read_text().splitlines()[0]
+    assert "vep_cache_version" in txt and "plugins_version" in txt
 
+
+def test_03_merge_runs(tmp_path):
+    in_tsv = tmp_path / "normalised.tsv"
     out_tsv = tmp_path / "merged.tsv"
     result = run_docker(
         [
             "vep-merge-gnomad-constraint",
             "--in-tsv",
-            str(normalised_tsv),
+            str(in_tsv),
             "--constraint-tsv",
             str(TESTS / "tiny.constraint.tsv"),
             "--on",
