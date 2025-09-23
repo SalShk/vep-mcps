@@ -1,20 +1,19 @@
 {
-  "$schema": "https://json-schema.org/draft/2020-12/schema",
   "title": "ANNOTATION_NORMALISED",
   "type": "object",
   "properties": {
     "Location": { "type": "string" },
-    "Transcript": { "type": ["string","null"] },
-    "Gene_symbol": { "type": ["string","null"] },
+    "Transcript": { "type": ["string", "null"] },
+    "Gene_symbol": { "type": ["string", "null"] },
     "Consequence": { "type": "string" },
-    "REVEL_score": { "type": ["number","null"] },
-    "CADD_PHRED": { "type": ["number","null"] },
-    "SpliceAI_DS_AG": { "type": ["number","null"] },
-    "SpliceAI_DS_AL": { "type": ["number","null"] },
-    "SpliceAI_DS_DG": { "type": ["number","null"] },
-    "SpliceAI_DS_DL": { "type": ["number","null"] },
-    "vep_cache_version": { "type": ["string","null"] },
-    "plugins_version": { "type": ["string","null"] }
+    "REVEL_score": { "type": ["number", "null"] },
+    "CADD_PHRED": { "type": ["number", "null"] },
+    "SpliceAI_DS_AG": { "type": ["number", "null"] },
+    "SpliceAI_DS_AL": { "type": ["number", "null"] },
+    "SpliceAI_DS_DG": { "type": ["number", "null"] },
+    "SpliceAI_DS_DL": { "type": ["number", "null"] },
+    "vep_cache_version": { "type": ["string", "null"] },
+    "plugins_version": { "type": ["string", "null"] }
   },
-  "required": ["Location","Consequence"]
+  "required": ["Location", "Consequence"]
 }
