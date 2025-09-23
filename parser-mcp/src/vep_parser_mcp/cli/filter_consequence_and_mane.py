@@ -7,12 +7,14 @@ import pandas as pd
 import typer
 from rich import print
 
+app = typer.Typer()
+
+@app.command()
 def main(
     in_tsv: Annotated[
         Path,
         typer.Option(
             "--in-tsv",
-            "-i",
             help="Input TSV file from VEP",
             show_default=False,
             exists=True,
@@ -23,7 +25,6 @@ def main(
         Path,
         typer.Option(
             "--out-tsv",
-            "-o",
             help="Output TSV file",
             show_default=False,
             writable=True,
@@ -33,7 +34,6 @@ def main(
         str,
         typer.Option(
             "--keep-consequence",
-            "-c",
             help="Comma-separated consequences to keep",
             show_default=True,
         ),
@@ -84,4 +84,4 @@ def main(
         raise typer.Exit(code=1) from None
 
 if __name__ == "__main__":
-    typer.run(main)
+    app()
