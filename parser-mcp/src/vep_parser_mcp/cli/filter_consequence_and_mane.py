@@ -9,16 +9,42 @@ from rich import print
 
 def main(
     in_tsv: Annotated[
-        Path, typer.Option("--in-tsv", "-i", help="Input TSV file from VEP")
+        Path,
+        typer.Option(
+            "--in-tsv",
+            "-i",
+            help="Input TSV file from VEP",
+            show_default=False,
+            exists=True,
+            readable=True,
+        ),
     ],
     out_tsv: Annotated[
-        Path, typer.Option("--out-tsv", "-o", help="Output TSV file")
+        Path,
+        typer.Option(
+            "--out-tsv",
+            "-o",
+            help="Output TSV file",
+            show_default=False,
+            writable=True,
+        ),
     ],
     keep_consequence: Annotated[
-        str, typer.Option("--keep-consequence", "-c", help="Comma-separated consequences to keep")
+        str,
+        typer.Option(
+            "--keep-consequence",
+            "-c",
+            help="Comma-separated consequences to keep",
+            show_default=True,
+        ),
     ] = "missense_variant,stop_gained",
     mane_only: Annotated[
-        bool, typer.Option("--mane-only", help="Keep only MANE select transcripts")
+        bool,
+        typer.Option(
+            "--mane-only",
+            help="Keep only MANE select transcripts",
+            is_flag=True,
+        ),
     ] = False,
 ) -> None:
     """Filter VEP TSV by consequence and optionally MANE select transcripts."""

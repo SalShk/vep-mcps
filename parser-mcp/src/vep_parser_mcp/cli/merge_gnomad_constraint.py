@@ -7,9 +7,6 @@ import pandas as pd
 import typer
 from rich import print
 
-app = typer.Typer()
-
-@app.command()
 def main(
     in_tsv: Annotated[
         Path,
@@ -104,4 +101,4 @@ def main(
         raise typer.Exit(code=1) from None
 
 if __name__ == "__main__":
-    app()
+    typer.run(main)

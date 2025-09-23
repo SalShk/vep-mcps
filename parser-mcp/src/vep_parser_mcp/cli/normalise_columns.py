@@ -9,19 +9,19 @@ from rich import print
 
 def main(
     in_tsv: Annotated[
-        Path, typer.Option("--in-tsv", "-i", help="Input TSV file from VEP")
+        Path, typer.Option("--in-tsv", "-i", help="Filtered TSV")
     ],
     out_tsv: Annotated[
-        Path, typer.Option("--out-tsv", "-o", help="Output TSV file")
+        Path, typer.Option("--out-tsv", "-o", help="Output normalised TSV")
     ],
     vep_cache_version: Annotated[
-        str, typer.Option("--vep-cache-version", "-v", help="VEP cache version")
+        str, typer.Option("--vep-cache-version", "-v", help="VEP cache version, e.g. 110")
     ],
     plugins_version: Annotated[
-        str, typer.Option("--plugins-version", "-p", help="VEP plugins version")
+        str, typer.Option("--plugins-version", "-p", help="Plugins version tag, e.g. 2025-09-01")
     ],
 ) -> None:
-    """Normalise VEP TSV columns and add version metadata."""
+    """Normalise column names and add provenance columns."""
     try:
         print(f"[debug] Reading input: {in_tsv}")
         df = pd.read_csv(in_tsv, sep="\t", dtype=str, low_memory=False)
