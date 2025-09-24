@@ -23,7 +23,9 @@ vep-filter-consequence-mane = "vep_parser_mcp.cli.filter_consequence_and_mane:cl
 vep-normalise-columns       = "vep_parser_mcp.cli.normalise_columns:cli"
 vep-merge-gnomad-constraint = "vep_parser_mcp.cli.merge_gnomad_constraint:cli"
 vep-parsing-overview        = "vep_parser_mcp.cli.parsing_overview:cli"
+vep-overview                = "vep_parser_mcp.cli.parsing_overview:cli"  # <— alias
 vep-prepare-pipeline        = "vep_parser_mcp.cli.prepare_pipeline:cli"
+
 
 [project.optional-dependencies]
 dev = [
