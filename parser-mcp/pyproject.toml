@@ -21,7 +21,7 @@ dependencies = [
 [project.scripts]
 vep-parsing-overview = "vep_parser_mcp.cli.parsing_overview:app"
 vep-overview = "vep_parser_mcp.cli.parsing_overview:app"
-vep-filter-consequence-mane = "vep_parser_mcp.cli.filter_consequence_and_mane:app"
+vep-filter-consequence-mane = "vep_parser_mcp.cli.filter_consequence_and_mane:cli"
 vep-normalise-columns = "vep_parser_mcp.cli.normalise_columns:app"
 vep-merge-gnomad-constraint = "vep_parser_mcp.cli.merge_gnomad_constraint:app"
 vep-prepare-pipeline = "vep_parser_mcp.cli.prepare_pipeline:app"

@@ -8,23 +8,37 @@ import pandas as pd
 import typer
 from rich import print
 
-app = typer.Typer(
-    add_completion=False,
-    help="Filter VEP TSV by consequence and optionally MANE / CANONICAL.",
-)
+# ──────────────────────────────────────────────────────────────────────────────
+# Helpers
+# ──────────────────────────────────────────────────────────────────────────────
 
-def _open(path: Path):
-    if str(path).endswith(".gz"):
-        return gzip.open(path, "rt", encoding="utf-8")
-    return open(path, "r", encoding="utf-8")
+def _open_read(path: Path):
+    """Open TSV (optionally .gz) for reading."""
+    p = str(path)
+    if p.endswith(".gz"):
+        return gzip.open(p, "rt", encoding="utf-8")
+    return open(p, "r", encoding="utf-8")
 
-@app.command()
+
+def _open_write(path: Path):
+    """Open TSV (optionally .gz) for writing. Creates parent dir."""
+    path.parent.mkdir(parents=True, exist_ok=True)
+    p = str(path)
+    if p.endswith(".gz"):
+        return gzip.open(p, "wt", encoding="utf-8")
+    return open(p, "w", encoding="utf-8")
+
+
+# ──────────────────────────────────────────────────────────────────────────────
+# Command
+# ──────────────────────────────────────────────────────────────────────────────
+
 def main(
     in_tsv: Annotated[
         Path,
         typer.Option(
             "--in-tsv", "-i",
-            help="Input TSV file from VEP",
+            help="Input TSV file from VEP (.tsv or .tsv.gz).",
             exists=True, readable=True,
         ),
     ],
@@ -32,7 +46,7 @@ def main(
         Path,
         typer.Option(
             "--out-tsv", "-o",
-            help="Output TSV file",
+            help="Output TSV file (.tsv or .tsv.gz).",
             writable=True,
         ),
     ],
@@ -40,7 +54,8 @@ def main(
         str,
         typer.Option(
             "--keep-consequence", "-c",
-            help="Comma-separated consequences to keep (case-sensitive, matches any in '&' lists).",
+            help="Comma-separated consequences to keep (case-sensitive; "
+                 "matches any term within '&' lists).",
             show_default=True,
         ),
     ] = "missense_variant,stop_gained",
@@ -48,7 +63,7 @@ def main(
         bool,
         typer.Option(
             "--mane-only",
-            help="Keep only MANE select transcripts (detects columns: MANE, MANE_select, MANE_SELECT).",
+            help="Keep only MANE select transcripts (detects one of: MANE, MANE_select, MANE_SELECT).",
             is_flag=True,
         ),
     ] = False,
@@ -56,81 +71,84 @@ def main(
         bool,
         typer.Option(
             "--require-canonical",
-            help="Keep only canonical transcripts (requires CANONICAL=='YES').",
+            help="Keep only canonical transcripts (requires CANONICAL == 'YES').",
             is_flag=True,
         ),
     ] = False,
 ) -> None:
     """
-    Filter VEP TSV by consequence, and optionally by MANE and/or CANONICAL.
+    Filter VEP TSV by consequence and optionally by MANE and/or CANONICAL.
+    Supports gzipped input/output.
     """
     try:
         print(f"[debug] Reading input: {in_tsv}")
-        with _open(in_tsv) as f:
+        with _open_read(in_tsv) as f:
             df = pd.read_csv(f, sep="\t", dtype=str, low_memory=False)
 
-        # --- columns presence / detection
+        # Required column
         cons_col = "Consequence"
         if cons_col not in df.columns:
             raise ValueError(f"Missing column '{cons_col}' in {in_tsv}")
 
-        # Flexible MANE column names
+        # Optional columns
         mane_candidates = ["MANE", "MANE_select", "MANE_SELECT"]
         mane_col = next((c for c in mane_candidates if c in df.columns), None)
         if mane_only and mane_col is None:
-            raise ValueError(f"--mane-only requested but none of MANE columns present: {mane_candidates}")
+            raise ValueError(
+                f"--mane-only requested but none of MANE columns present: {mane_candidates}"
+            )
 
-        # Canonical column (strict name used by many VEP runs)
         canon_col = "CANONICAL"
         if require_canonical and canon_col not in df.columns:
             raise ValueError(f"--require-canonical requested but column '{canon_col}' not present")
 
-        # --- consequence filter
+        # Consequence filter
         keep = {c.strip() for c in keep_consequence.split(",") if c.strip()}
         print(f"[debug] Filtering for consequences: {keep}")
 
-        def has_kept_consequence(s: str) -> bool:
+        def _has_kept_consequence(s: str) -> bool:
             if not isinstance(s, str) or not s or s.lower() == "nan":
                 return False
-            # support either "a&b&c" or accidental commas
-            parts = []
+            # Split on commas *then* split on '&' to support both separators safely
+            parts: list[str] = []
             for chunk in s.split(","):
                 parts.extend(p.strip() for p in chunk.split("&"))
-            return any(p in keep for p in parts)
+            return any(p in keep for p in parts if p)
 
-        before = len(df)
-        df = df[df[cons_col].map(has_kept_consequence)]
-        print(f"[debug] Consequence filter: {before} → {len(df)} rows")
+        before_n = len(df)
+        df = df[df[cons_col].map(_has_kept_consequence)]
+        print(f"[debug] Consequence filter: {before_n} → {len(df)} rows")
 
-        # --- canonical (if requested)
+        # Canonical filter
         if require_canonical:
             truth = df[canon_col].astype(str).str.strip().str.upper().eq("YES")
             df = df[truth]
             print(f"[debug] After CANONICAL filter: {len(df)} rows")
 
-        # --- MANE (if requested)
+        # MANE filter
         if mane_only:
-            # treat any non-empty as truthy for MANE presence; many VEP runs store MANE transcript id here
+            # Treat any non-empty as truthy (many VEP runs store the MANE transcript string here)
             truthy = df[mane_col].astype(str).str.strip().ne("")
             df = df[truthy]
             print(f"[debug] After MANE filter ({mane_col} non-empty): {len(df)} rows")
 
-        out_tsv.parent.mkdir(parents=True, exist_ok=True)
-        df.to_csv(out_tsv, sep="\t", index=False)
+        with _open_write(out_tsv) as g:
+            df.to_csv(g, sep="\t", index=False)
         print(f"[green]Wrote {out_tsv}")
+
     except Exception as e:
         print(f"[red]Error: {e}")
-        raise typer.Exit(code=1)
+        raise typer.Exit(code=1) from None
+
+
+# ──────────────────────────────────────────────────────────────────────────────
+# Entry point for both console-script and `python -m ...`
+# ──────────────────────────────────────────────────────────────────────────────
+
+def cli() -> None:
+    """Entry point wrapper (console scripts & `python -m ...`)."""
+    typer.run(main)
+
 
 if __name__ == "__main__":
-    # Support BOTH:
-    #   - python -m vep_parser_mcp.cli.X --flags ...
-    #   - python -m vep_parser_mcp.cli.X main --flags ...
-    # If the first arg looks like a flag, treat it as a single-command app.
-    import sys
-    first = sys.argv[1] if len(sys.argv) > 1 else ""
-    if first.startswith("-"):
-        import typer
-        typer.run(main)   # single-command style
-    else:
-        app()             # subcommand style (expects "main" or other subcommands)
+    cli()
