@@ -123,4 +123,5 @@ def main(
         raise typer.Exit(code=1)
 
 if __name__ == "__main__":
-    app()
+    import typer
+    typer.run(main)
