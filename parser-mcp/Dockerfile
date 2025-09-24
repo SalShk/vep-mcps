@@ -1,20 +1,17 @@
 FROM python:3.12-slim
 
-# system deps for pandas, compressed I/O
-RUN apt-get update && apt-get install -y --no-install-recommends \
-    build-essential ca-certificates && \
-    rm -rf /var/lib/apt/lists/*
-
 WORKDIR /app
-COPY pyproject.toml README.md /app/
-RUN pip install --no-cache-dir hatchling && python -m pip install --no-cache-dir .
 
-COPY src/ /app/src/
-COPY schemas/ /app/schemas/
-COPY tests/ /app/tests/
+# Copy the entire project directory into the container
+COPY parser-mcp ./parser-mcp/
+COPY README.md .
+COPY requirements.txt .
+COPY schemas ./schemas/
+COPY tests ./tests/
 
-ENV PYTHONUNBUFFERED=1
-# Example usage:
-# docker run --rm -v $PWD:/wd -w /wd vep-parser-mcp \
-#   vep-filter-consequence-mane --in-tsv tests/data/tiny.vep.tsv.gz --out-tsv out.tsv.gz --keep-consequence missense_variant
+# Set the working directory to the package's location and install it
+WORKDIR /app/parser-mcp
+RUN pip install --no-cache-dir .[dev]
 
+# Set the default command to start a shell when the container runs
+CMD ["bash"]
