@@ -1,0 +1,3 @@
+variant_id	Gene_symbol	Transcript	Consequence	ZYG	IMPACT	gnomADe_AF	gnomADg_AF	AF	MAX_AF	CLIN_SIG	clinvar_review	PUBMED	SIFT	PolyPhen	CADD_PHRED	"REVEL""LoF"	LoF_filter	Lof_flags	LoF_info	DANN_score	vep_cache_version	plugins_version
+chr1:1000:A>G	GENE1	ENST000001	missense_variant	het	moderate	-	-	-	-	-	-	-	-	-	-	-	-	-	-	-	109	v1.0
+chr2:2000:T>A	GENE2	ENST000002	stop_gained	hom	high	-	-	-	-	-	-	-	-	-	-	-	-	-	-	-	109	v1.0

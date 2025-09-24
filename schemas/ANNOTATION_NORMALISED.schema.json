@@ -1,20 +1,18 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "title": "ANNOTATION_NORMALISED",
+  "$id": "ANNOTATION_NORMALISED.schema.json",
+  "title": "Normalised VEP TSV row",
   "type": "object",
+  "additionalProperties": true,
+  "required": ["variant_id", "Consequence", "Gene_symbol", "Transcript"],
   "properties": {
-    "Location": { "type": "string" },
-    "Transcript": { "type": ["string","null"] },
-    "Gene_symbol": { "type": ["string","null"] },
-    "Consequence": { "type": "string" },
-    "REVEL_score": { "type": ["number","null"] },
-    "CADD_PHRED": { "type": ["number","null"] },
-    "SpliceAI_DS_AG": { "type": ["number","null"] },
-    "SpliceAI_DS_AL": { "type": ["number","null"] },
-    "SpliceAI_DS_DG": { "type": ["number","null"] },
-    "SpliceAI_DS_DL": { "type": ["number","null"] },
-    "vep_cache_version": { "type": ["string","null"] },
-    "plugins_version": { "type": ["string","null"] }
-  },
-  "required": ["Location","Consequence"]
+    "variant_id": { "type": "string", "minLength": 1 },
+    "Consequence": { "type": "string", "minLength": 1 },
+    "Gene_symbol": { "type": "string" },
+    "Transcript": { "type": "string" },
+    "dbSNP": { "type": "string" },
+    "Gene_pheno": { "type": "string" },
+    "vep_cache_version": { "type": "string", "pattern": "^[0-9]+$" },
+    "plugins_version": { "type": "string" }
+  }
 }

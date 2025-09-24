@@ -1,3 +1,2 @@
 variant_id	Consequence	ZYG	IMPACT	gnomADe_AF	gnomADg_AF	AF	MAX_AF	CLIN_SIG	clinvar_review	PUBMED	SIFT	PolyPhen	CADD_PHRED	REVEL"LoF	LoF_filter	Lof_flags	LoF_info	DANN_score	SYMBOL	Feature
-chr1:1000:A>G	missense_variant	het	moderate	-	-	-	-	-	-	-	-	-	-	-	-	-	-	-	GENE1	ENST000001
-chr2:2000:T>A	stop_gained	hom	high	-	-	-	-	-	-	-	-	-	-	-	-	-	-	-	GENE2	ENST000002
+Eigen-phred_coding	FATHMM_pred	GERP++_RS	GenoCanyon_score	LT_predM-CAPOGPCAP	-	-	-	-	-	-	-	-	-	-	-	-	-	-	-	-
