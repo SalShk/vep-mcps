@@ -14,6 +14,7 @@ from rich.console import Console
 app = typer.Typer(add_completion=False)
 console = Console()
 
+
 def _open_any(path: Path | str):
     p = str(path)
     if p == "-" or p == "":
@@ -21,6 +22,7 @@ def _open_any(path: Path | str):
     if p.endswith(".gz"):
         return gzip.open(p, "rt", encoding="utf-8")
     return open(p, "r", encoding="utf-8")
+
 
 @app.command()
 def main(
@@ -71,7 +73,7 @@ def main(
             console.print(tbl)
             raise typer.Exit(0)
 
-        # Preview first columns (unchanged behavior)
+        # Preview first columns
         cols_preview = list(df.columns[: min(12, n_cols)])
         print(f"[cyan]First columns ({len(cols_preview)} of {n_cols}):[/cyan] {cols_preview}")
 
@@ -98,9 +100,9 @@ def main(
             if n_unknown:
                 print(f"[yellow]WARNING:[/yellow] {n_unknown} rows have Gene_symbol=UNKNOWN.")
 
-        # Compact head of important columns
+        # Compact head of important columns (+ optional extras)
         base_cols = [c for c in ["variant_id", "Gene_symbol", "Transcript"] if c in df.columns]
-        extra_cols = []
+        extra_cols: list[str] = []
         if columns:
             extra_cols = [c for c in columns if c in df.columns and c not in base_cols]
         show_cols = base_cols + extra_cols
@@ -109,7 +111,6 @@ def main(
             try:
                 print(df[show_cols].head(head).to_string(index=False))
             except Exception:
-                # fallback if any dtype/mixed issue
                 print(df[show_cols].astype(str).head(head).to_string(index=False))
 
         # Unique summaries for arbitrary columns
@@ -134,15 +135,11 @@ def main(
         print(f"[red]Error: {e}")
         raise typer.Exit(code=1)
 
+
+def cli():
+    """Console entrypoint + `python -m` support."""
+    typer.run(main)
+
+
 if __name__ == "__main__":
-    # Support BOTH:
-    #   - python -m vep_parser_mcp.cli.X --flags ...
-    #   - python -m vep_parser_mcp.cli.X main --flags ...
-    # If the first arg looks like a flag, treat it as a single-command app.
-    import sys
-    first = sys.argv[1] if len(sys.argv) > 1 else ""
-    if first.startswith("-"):
-        import typer
-        typer.run(main)   # single-command style
-    else:
-        app()             # subcommand style (expects "main" or other subcommands)
+    cli()

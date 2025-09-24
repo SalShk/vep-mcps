@@ -187,15 +187,9 @@ def main(
         print(f"[red]Error: {e}")
         raise typer.Exit(code=1)
 
+def cli():
+    """Console entrypoint + `python -m` support."""
+    typer.run(main)
+
 if __name__ == "__main__":
-    # Support BOTH:
-    #   - python -m vep_parser_mcp.cli.X --flags ...
-    #   - python -m vep_parser_mcp.cli.X main --flags ...
-    # If the first arg looks like a flag, treat it as a single-command app.
-    import sys
-    first = sys.argv[1] if len(sys.argv) > 1 else ""
-    if first.startswith("-"):
-        import typer
-        typer.run(main)   # single-command style
-    else:
-        app()             # subcommand style (expects "main" or other subcommands)
+    cli()

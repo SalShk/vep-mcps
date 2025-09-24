@@ -1,4 +1,5 @@
 from __future__ import annotations
+
 from pathlib import Path
 from typing import Annotated
 import os
@@ -66,12 +67,12 @@ def main(
     Merge gnomAD constraint metrics onto annotations.
     """
     try:
-        on = on.strip().lower()
-        if on not in {"gene_symbol", "transcript"}:
+        on_norm = on.strip().lower()
+        if on_norm not in {"gene_symbol", "transcript"}:
             raise typer.BadParameter("--on must be 'gene_symbol' or 'transcript'")
 
-        how = how.strip().lower()
-        if how not in {"left", "inner"}:
+        how_norm = how.strip().lower()
+        if how_norm not in {"left", "inner"}:
             raise typer.BadParameter("--how must be 'left' or 'inner'")
 
         # Read inputs
@@ -84,7 +85,7 @@ def main(
         ann_gene_col = "Gene_symbol" if "Gene_symbol" in ann.columns else None
         ann_tx_col   = "Transcript"  if "Transcript"  in ann.columns else None
 
-        if on == "gene_symbol":
+        if on_norm == "gene_symbol":
             if not ann_gene_col:
                 console.log("[red]Annotation missing 'Gene_symbol'. Run normalise step first.")
                 raise typer.Exit(code=1)
@@ -100,9 +101,9 @@ def main(
             raise typer.Exit(code=1)
 
         # Normalise keys
-        ann[left_key]  = ann[left_key].astype(str).str.strip()
-        cons[right_key]= cons[right_key].astype(str).str.strip()
-        if on == "gene_symbol":
+        ann[left_key]   = ann[left_key].astype(str).str.strip()
+        cons[right_key] = cons[right_key].astype(str).str.strip()
+        if on_norm == "gene_symbol":
             ann[left_key]   = ann[left_key].str.upper()
             cons[right_key] = cons[right_key].str.upper()
 
@@ -110,14 +111,17 @@ def main(
         left_vals  = set(ann[left_key].unique()) - {""}
         right_vals = set(cons[right_key].unique()) - {""}
         overlap = left_vals & right_vals
-        console.log(f"[blue]Join on '{on}': left uniques={len(left_vals)}, right uniques={len(right_vals)}, overlap={len(overlap)}")
+        console.log(
+            f"[blue]Join on '{on_norm}': left uniques={len(left_vals)}, "
+            f"right uniques={len(right_vals)}, overlap={len(overlap)}"
+        )
         if not overlap:
             console.log("[yellow]WARNING: no overlapping join keys; proceeding (will yield empty/NaN constraint columns).")
 
         # Merge
         merged = ann.merge(
             cons,
-            how=how,
+            how=how_norm,
             left_on=left_key,
             right_on=right_key,
             suffixes=("", "_constraint"),
@@ -130,7 +134,7 @@ def main(
         with open_write_any(out_tsv) as g:
             merged.to_csv(g, sep="\t", index=False)
 
-        console.log(f"[green]Merged ({how}) on {left_key} → {out_tsv}  (rows: {len(merged)})")
+        console.log(f"[green]Merged ({how_norm}) on {left_key} → {out_tsv}  (rows: {len(merged)})")
 
     except typer.Exit:
         raise
@@ -138,15 +142,9 @@ def main(
         console.log(f"[red]Error: {e}")
         raise typer.Exit(code=1)
 
+def cli():
+    """Console entrypoint + `python -m` support."""
+    typer.run(main)
+
 if __name__ == "__main__":
-    # Support BOTH:
-    #   - python -m vep_parser_mcp.cli.X --flags ...
-    #   - python -m vep_parser_mcp.cli.X main --flags ...
-    # If the first arg looks like a flag, treat it as a single-command app.
-    import sys
-    first = sys.argv[1] if len(sys.argv) > 1 else ""
-    if first.startswith("-"):
-        import typer
-        typer.run(main)   # single-command style
-    else:
-        app()             # subcommand style (expects "main" or other subcommands)
+    cli()

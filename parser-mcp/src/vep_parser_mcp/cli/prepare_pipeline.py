@@ -35,18 +35,48 @@ def _must_exist(cmd: str) -> None:
 
 @app.command()
 def main(
-    in_tsv: Annotated[Path, typer.Option("-i", "--in-tsv", exists=True, readable=True, help="VEP TSV input")],
-    constraint_tsv: Annotated[Path, typer.Option("-c", "--constraint-tsv", exists=True, readable=True, help="gnomAD constraint TSV(.gz)")],
-    out_dir: Annotated[Path, typer.Option("-o", "--out-dir", help="Output directory")]=Path("parser-mcp/out"),
-    keep_consequence: Annotated[str, typer.Option("--keep-consequence", help="Comma-separated consequences to keep")]="missense_variant,stop_gained",
-    mane_only: Annotated[bool, typer.Option("--mane-only", help="Keep only MANE select transcripts")]=False,
-    vep_cache_version: Annotated[str, typer.Option("--vep-cache-version")]="109",
-    plugins_version: Annotated[str, typer.Option("--plugins-version")]="v1.0",
-    merge_on: Annotated[str, typer.Option("--on", help="Join key: transcript|gene_symbol")]="transcript",
-    merge_how: Annotated[str, typer.Option("--how", help="left|inner")]="left",
-    constraint_version: Annotated[Optional[str], typer.Option("--constraint-version", help="Annotate result with constraint version")]=None,
-    gzip_out: Annotated[bool, typer.Option("--gzip-out", help="Write outputs as .tsv.gz")]=False,
-    skip_overview: Annotated[bool, typer.Option("--skip-overview", help="Skip final overview")]=False,
+    in_tsv: Annotated[
+        Path,
+        typer.Option("-i", "--in-tsv", exists=True, readable=True, help="VEP TSV input"),
+    ],
+    constraint_tsv: Annotated[
+        Path,
+        typer.Option("-c", "--constraint-tsv", exists=True, readable=True, help="gnomAD constraint TSV(.gz)"),
+    ],
+    out_dir: Annotated[
+        Path,
+        typer.Option("-o", "--out-dir", help="Output directory"),
+    ] = Path("parser-mcp/out"),
+    keep_consequence: Annotated[
+        str,
+        typer.Option("--keep-consequence", help="Comma-separated consequences to keep"),
+    ] = "missense_variant,stop_gained",
+    mane_only: Annotated[
+        bool,
+        typer.Option("--mane-only", help="Keep only MANE select transcripts"),
+    ] = False,
+    vep_cache_version: Annotated[str, typer.Option("--vep-cache-version")] = "109",
+    plugins_version: Annotated[str, typer.Option("--plugins-version")] = "v1.0",
+    merge_on: Annotated[
+        str,
+        typer.Option("--on", help="Join key: transcript|gene_symbol"),
+    ] = "transcript",
+    merge_how: Annotated[
+        str,
+        typer.Option("--how", help="left|inner"),
+    ] = "left",
+    constraint_version: Annotated[
+        Optional[str],
+        typer.Option("--constraint-version", help="Annotate result with constraint version"),
+    ] = None,
+    gzip_out: Annotated[
+        bool,
+        typer.Option("--gzip-out", help="Write outputs as .tsv.gz"),
+    ] = False,
+    skip_overview: Annotated[
+        bool,
+        typer.Option("--skip-overview", help="Skip final overview"),
+    ] = False,
 ) -> None:
     """
     One-shot pipeline: filter → normalise → merge → (overview).
@@ -72,23 +102,28 @@ def main(
     normalised = with_ext("normalised")
     merged = with_ext("merged")
 
-    console.print(Panel.fit(
-        f"[bold]VEP MCP Pipeline[/bold]\n"
-        f"in: [cyan]{in_tsv}[/cyan]\n"
-        f"constraint: [cyan]{constraint_tsv}[/cyan]\n"
-        f"out dir: [cyan]{out_dir}[/cyan]",
-        title="prepare-pipeline",
-        border_style="blue",
-    ))
+    console.print(
+        Panel.fit(
+            f"[bold]VEP MCP Pipeline[/bold]\n"
+            f"in: [cyan]{in_tsv}[/cyan]\n"
+            f"constraint: [cyan]{constraint_tsv}[/cyan]\n"
+            f"out dir: [cyan]{out_dir}[/cyan]",
+            title="prepare-pipeline",
+            border_style="blue",
+        )
+    )
 
     total = 0.0
 
     # 1) Filter
     argv = [
         "vep-filter-consequence-mane",
-        "-i", str(in_tsv),
-        "-o", str(filtered),
-        "--keep-consequence", keep_consequence,
+        "-i",
+        str(in_tsv),
+        "-o",
+        str(filtered),
+        "--keep-consequence",
+        keep_consequence,
     ]
     if mane_only:
         argv.append("--mane-only")
@@ -97,21 +132,30 @@ def main(
     # 2) Normalise
     argv = [
         "vep-normalise-columns",
-        "-i", str(filtered),
-        "-o", str(normalised),
-        "--vep-cache-version", vep_cache_version,
-        "--plugins-version", plugins_version,
+        "-i",
+        str(filtered),
+        "-o",
+        str(normalised),
+        "--vep-cache-version",
+        vep_cache_version,
+        "--plugins-version",
+        plugins_version,
     ]
     total += _run(argv, "normalise")
 
     # 3) Merge
     argv = [
         "vep-merge-gnomad-constraint",
-        "-i", str(normalised),
-        "-c", str(constraint_tsv),
-        "-o", str(merged),
-        "--on", merge_on,
-        "--how", merge_how,
+        "-i",
+        str(normalised),
+        "-c",
+        str(constraint_tsv),
+        "-o",
+        str(merged),
+        "--on",
+        merge_on,
+        "--how",
+        merge_how,
     ]
     if constraint_version:
         argv += ["--constraint-version", constraint_version]
@@ -122,25 +166,23 @@ def main(
         argv = ["vep-overview", "-i", str(merged)]
         total += _run(argv, "overview")
 
-    console.print(Panel.fit(
-        f"[green]Pipeline complete[/green] → [bold]{merged}[/bold]\n"
-        f"filtered:  {filtered}\n"
-        f"normalised: {normalised}\n"
-        f"merged:     {merged}\n"
-        f"[dim]elapsed ~{total:.2f}s[/dim]",
-        title="done",
-        border_style="green",
-    ))
+    console.print(
+        Panel.fit(
+            f"[green]Pipeline complete[/green] → [bold]{merged}[/bold]\n"
+            f"filtered:  {filtered}\n"
+            f"normalised: {normalised}\n"
+            f"merged:     {merged}\n"
+            f"[dim]elapsed ~{total:.2f}s[/dim]",
+            title="done",
+            border_style="green",
+        )
+    )
+
+
+def cli():
+    """Console entrypoint + `python -m` support."""
+    typer.run(main)
+
 
 if __name__ == "__main__":
-    # Support BOTH:
-    #   - python -m vep_parser_mcp.cli.X --flags ...
-    #   - python -m vep_parser_mcp.cli.X main --flags ...
-    # If the first arg looks like a flag, treat it as a single-command app.
-    import sys
-    first = sys.argv[1] if len(sys.argv) > 1 else ""
-    if first.startswith("-"):
-        import typer
-        typer.run(main)   # single-command style
-    else:
-        app()             # subcommand style (expects "main" or other subcommands)
+    cli()
