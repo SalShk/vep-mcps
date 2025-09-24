@@ -1,13 +1,11 @@
+# Use a slim Python base image
 FROM python:3.12-slim
 
+# Set the working directory
 WORKDIR /app
 
 # Copy the entire project directory into the container
-COPY parser-mcp ./parser-mcp/
-COPY README.md .
-COPY requirements.txt .
-COPY schemas ./schemas/
-COPY tests ./tests/
+COPY . .
 
 # Set the working directory to the package's location and install it
 WORKDIR /app/parser-mcp

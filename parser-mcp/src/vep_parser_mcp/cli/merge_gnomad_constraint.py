@@ -2,18 +2,30 @@ from __future__ import annotations
 import typer
 import pandas as pd
 from rich.console import Console
-from ..io.gz import open_read, open_write
+from pathlib import Path
+import gzip
 
 app = typer.Typer(add_completion=False)
 console = Console()
 
+def open_read(path: Path):
+    if str(path).endswith('.gz'):
+        return gzip.open(path, 'rt', encoding='utf-8')
+    return open(path, 'r', encoding='utf-8')
+
+def open_write(path: Path):
+    path.parent.mkdir(parents=True, exist_ok=True)
+    if str(path).endswith('.gz'):
+        return gzip.open(path, 'wt', encoding='utf-8')
+    return open(path, 'w', encoding='utf-8')
+
 @app.command()
-def app(
-    in_tsv: str = typer.Option(..., "--in-tsv", help="ANNOTATION_NORMALISED input"),
-    constraint_tsv: str = typer.Option(..., "--constraint-tsv", help="gnomAD constraint TSV(.gz)"),
+def main(
+    in_tsv: Annotated[Path, typer.Option("--in-tsv", help="ANNOTATION_NORMALISED input")],
+    constraint_tsv: Annotated[Path, typer.Option("--constraint-tsv", help="gnomAD constraint TSV(.gz)")],
     on: str = typer.Option("gene_symbol", "--on", help="join key: gene_symbol|transcript"),
     how: str = typer.Option("left", "--how", help="left|inner"),
-    out_tsv: str = typer.Option(..., "--out-tsv"),
+    out_tsv: Annotated[Path, typer.Option("--out-tsv")],
     constraint_version: str = typer.Option(None, "--constraint-version")
 ) -> None:
     """
@@ -49,3 +61,6 @@ def app(
     except Exception as e:
         console.log(f"[red]Error: {e}")
         raise typer.Exit(code=1)
+
+if __name__ == "__main__":
+    app()

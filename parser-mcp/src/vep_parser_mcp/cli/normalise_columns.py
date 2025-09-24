@@ -1,57 +1,97 @@
 from __future__ import annotations
-import typer
+
+from pathlib import Path
+from typing import Annotated
+
 import pandas as pd
-from rich.console import Console
-from ..io.gz import open_read, open_write
+import typer
+from rich import print
+import os
+import gzip
 
-app = typer.Typer(add_completion=False)
-console = Console()
-
-RENAME_MAP = {
-    "Feature": "Transcript",
-    "SYMBOL": "Gene_symbol"
-}
-
-NUMERIC_FIELDS = [
-    "REVEL_score", "CADD_PHRED", "dbNSFP_GERP", "dbNSFP_phyloP", "dbNSFP_phastCons",
-    "SpliceAI_DS_AG", "SpliceAI_DS_AL", "SpliceAI_DS_DG", "SpliceAI_DS_DL"
-]
+app = typer.Typer()
 
 @app.command()
-def app(
-    in_tsv: str = typer.Option(..., "--in-tsv"),
-    out_tsv: str = typer.Option(..., "--out-tsv"),
-    vep_cache_version: str = typer.Option(None, "--vep-cache-version"),
-    plugins_version: str = typer.Option(None, "--plugins-version"),
+def main(
+    in_tsv: Annotated[
+        Path,
+        typer.Option(
+            "--in-tsv",
+            "-i",
+            help="Input TSV file from VEP",
+            show_default=False,
+            exists=True,
+            readable=True,
+        ),
+    ],
+    out_tsv: Annotated[
+        Path,
+        typer.Option(
+            "--out-tsv",
+            "-o",
+            help="Output TSV file",
+            show_default=False,
+            writable=True,
+        ),
+    ],
+    keep_consequence: Annotated[
+        str,
+        typer.Option(
+            "--keep-consequence",
+            "-c",
+            help="Comma-separated consequences to keep",
+            show_default=True,
+        ),
+    ] = "missense_variant,stop_gained",
+    mane_only: Annotated[
+        bool,
+        typer.Option(
+            "--mane-only",
+            help="Keep only MANE select transcripts",
+            is_flag=True,
+        ),
+    ] = False,
 ) -> None:
-    """
-    Normalise column names and coerce plugin fields to numeric where applicable.
-    Adds optional provenance fields.
-    """
+    """Filter VEP TSV by consequence and optionally MANE select transcripts."""
     try:
-        with open_read(in_tsv) as f:
-            df = pd.read_csv(f, sep="\t", dtype=str, low_memory=False)
+        print(f"[debug] Reading input: {in_tsv}")
+        
+        if str(in_tsv).endswith('.gz'):
+            with gzip.open(in_tsv, 'rt') as f:
+                df = pd.read_csv(f, sep="\t", dtype=str, low_memory=False)
+        else:
+            df = pd.read_csv(in_tsv, sep="\t", dtype=str, low_memory=False)
 
-        # Rename standard columns
-        for old, new in RENAME_MAP.items():
-            if old in df.columns:
-                df.rename(columns={old: new}, inplace=True)
+        cons_col = "Consequence"
+        mane_col = "MANE_select"
+        if cons_col not in df.columns:
+            raise ValueError(f"Missing column '{cons_col}' in {in_tsv}")
 
-        # Coerce numeric plugin fields if present
-        for col in NUMERIC_FIELDS:
-            if col in df.columns:
-                df[col] = pd.to_numeric(df[col], errors="coerce")
+        keep = {c.strip() for c in keep_consequence.split(",") if c.strip()}
+        print(f"[debug] Filtering for consequences: {keep}")
 
-        # Provenance
-        if vep_cache_version:
-            df["vep_cache_version"] = vep_cache_version
-        if plugins_version:
-            df["plugins_version"] = plugins_version
+        def _has_kept_consequence(s: str) -> bool:
+            if not s or s.lower() == "nan":
+                return False
+            parts = [p.strip() for p in s.split("&")]
+            return any(p in keep for p in parts)
 
-        with open_write(out_tsv) as g:
-            df.to_csv(g, sep="\t", index=False)
+        df = df[df[cons_col].astype(str).map(_has_kept_consequence)]
+        print(f"[debug] Filtered to {len(df)} rows")
 
-        console.log(f"[green]Normalised → {out_tsv}")
+        if mane_only:
+            if mane_col not in df.columns:
+                raise ValueError(f"Missing column '{mane_col}' needed for --mane-only")
+            truthy = {"yes", "true", "1", "y", "t"}
+            df = df[df[mane_col].astype(str).str.strip().str.lower().isin(truthy)]
+            print(f"[debug] After MANE filter: {len(df)} rows")
+
+        out_tsv.parent.mkdir(parents=True, exist_ok=True)
+        df.to_csv(out_tsv, sep="\t", index=False)
+        print(f"[green]Wrote {out_tsv}")
     except Exception as e:
-        console.log(f"[red]Error: {e}")
-        raise typer.Exit(code=1)
+        print(f"[red]Error: {e}")
+        raise typer.Exit(code=1) from None
+
+if __name__ == "__main__":
+    app()

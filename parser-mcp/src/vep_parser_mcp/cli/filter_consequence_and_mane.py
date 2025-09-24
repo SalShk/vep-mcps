@@ -1,47 +1,96 @@
 from __future__ import annotations
-import sys
-from typing import List
-import typer
+from pathlib import Path
+from typing import Annotated
 import pandas as pd
-from rich.console import Console
-from ..io.gz import open_read, open_write
+import typer
+from rich import print
+import gzip
+import sys
+import os
 
-app = typer.Typer(add_completion=False)
-console = Console()
+app = typer.Typer()
 
 @app.command()
-def app(
-    in_tsv: str = typer.Option(..., "--in-tsv", help="Input VEP tabular file (.tsv or .tsv.gz)"),
-    out_tsv: str = typer.Option(..., "--out-tsv", help="Output filtered VEP tabular file"),
-    keep_consequence: List[str] = typer.Option(..., "--keep-consequence", help="Consequences to keep"),
-    require_canonical: bool = typer.Option(False, "--require-canonical", help="Keep only CANONICAL=YES"),
-    require_mane: bool = typer.Option(False, "--require-mane", help="Require MANE/MANE_SELECT present"),
+def main(
+    in_tsv: Annotated[
+        Path,
+        typer.Option(
+            "--in-tsv",
+            "-i",
+            help="Input TSV file from VEP",
+            show_default=False,
+            exists=True,
+            readable=True,
+        ),
+    ],
+    out_tsv: Annotated[
+        Path,
+        typer.Option(
+            "--out-tsv",
+            "-o",
+            help="Output TSV file",
+            show_default=False,
+            writable=True,
+        ),
+    ],
+    keep_consequence: Annotated[
+        str,
+        typer.Option(
+            "--keep-consequence",
+            "-c",
+            help="Comma-separated consequences to keep",
+            show_default=True,
+        ),
+    ] = "missense_variant,stop_gained",
+    mane_only: Annotated[
+        bool,
+        typer.Option(
+            "--mane-only",
+            help="Keep only MANE select transcripts",
+            is_flag=True,
+        ),
+    ] = False,
 ) -> None:
-    """
-    Filter VEP tabular output by consequence and optionally CANONICAL/MANE.
-    Preserves the same column layout for downstream tools.
-    """
+    """Filter VEP TSV by consequence and optionally MANE select transcripts."""
     try:
-        with open_read(in_tsv) as f:
-            df = pd.read_csv(f, sep="\t", dtype=str, low_memory=False)
-        if "Consequence" not in df.columns:
-            raise ValueError("Missing 'Consequence' column in input.")
+        print(f"[debug] Reading input: {in_tsv}")
+        
+        if str(in_tsv).endswith('.gz'):
+            with gzip.open(in_tsv, 'rt') as f:
+                df = pd.read_csv(f, sep="\t", dtype=str, low_memory=False)
+        else:
+            df = pd.read_csv(in_tsv, sep="\t", dtype=str, low_memory=False)
 
-        mask = df["Consequence"].isin(keep_consequence)
-        if require_canonical and "CANONICAL" in df.columns:
-            mask &= (df["CANONICAL"].fillna("") == "YES")
-        if require_mane:
-            mane_col = "MANE_SELECT" if "MANE_SELECT" in df.columns else ("MANE" if "MANE" in df.columns else None)
-            if mane_col:
-                mask &= df[mane_col].notna() & (df[mane_col].astype(str) != "")
-            else:
-                console.log("[yellow]MANE column not found; '--require-mane' ignored.")
-        out = df.loc[mask].copy()
+        cons_col = "Consequence"
+        mane_col = "MANE_select"
+        if cons_col not in df.columns:
+            raise ValueError(f"Missing column '{cons_col}' in {in_tsv}")
 
-        with open_write(out_tsv) as g:
-            out.to_csv(g, sep="\t", index=False)
+        keep = {c.strip() for c in keep_consequence.split(",") if c.strip()}
+        print(f"[debug] Filtering for consequences: {keep}")
 
-        console.log(f"[green]Filtered rows: {len(out)} (from {len(df)}) → {out_tsv}")
+        def _has_kept_consequence(s: str) -> bool:
+            if not s or s.lower() == "nan":
+                return False
+            parts = [p.strip() for p in s.split("&")]
+            return any(p in keep for p in parts)
+
+        df = df[df[cons_col].astype(str).map(_has_kept_consequence)]
+        print(f"[debug] Filtered to {len(df)} rows")
+
+        if mane_only:
+            if mane_col not in df.columns:
+                raise ValueError(f"Missing column '{mane_col}' needed for --mane-only")
+            truthy = {"yes", "true", "1", "y", "t"}
+            df = df[df[mane_col].astype(str).str.strip().str.lower().isin(truthy)]
+            print(f"[debug] After MANE filter: {len(df)} rows")
+
+        out_tsv.parent.mkdir(parents=True, exist_ok=True)
+        df.to_csv(out_tsv, sep="\t", index=False)
+        print(f"[green]Wrote {out_tsv}")
     except Exception as e:
-        console.log(f"[red]Error: {e}")
-        raise typer.Exit(code=1)
+        print(f"[red]Error: {e}")
+        raise typer.Exit(code=1) from None
+
+if __name__ == "__main__":
+    app()
