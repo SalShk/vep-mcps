@@ -30,3 +30,6 @@ docker run --rm -v "$PWD:/wd" -w /wd vep-parser-mcp:0.1.0 \
   -i tests/data/tiny.vep.tsv \
   -c tests/data/tiny.constraint.tsv \
   -o parser-mcp/out
+```
+
+
