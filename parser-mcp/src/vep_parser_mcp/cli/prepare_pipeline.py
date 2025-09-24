@@ -133,5 +133,4 @@ def main(
     ))
 
 if __name__ == "__main__":
-    import typer
-    typer.run(main)
+    app()
