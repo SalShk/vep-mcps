@@ -132,8 +132,5 @@ def main(
         border_style="green",
     ))
 
-
 if __name__ == "__main__":
-    import typer
-    typer.run(main)
-
+    app()

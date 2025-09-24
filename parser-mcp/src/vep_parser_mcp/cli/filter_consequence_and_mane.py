@@ -123,7 +123,4 @@ def main(
         raise typer.Exit(code=1)
 
 if __name__ == "__main__":
-    # Makes `python -m vep_parser_mcp.cli.filter_consequence_and_mane ...`
-    # work without needing a subcommand.
-    import typer
-    typer.run(main)
+    app()
