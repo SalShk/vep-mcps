@@ -4,6 +4,7 @@ import pandas as pd
 from rich.console import Console
 from pathlib import Path
 import gzip
+from typing import Annotated
 
 app = typer.Typer(add_completion=False)
 console = Console()
@@ -21,11 +22,13 @@ def open_write(path: Path):
 
 @app.command()
 def main(
+    # Required parameters first
     in_tsv: Annotated[Path, typer.Option("--in-tsv", help="ANNOTATION_NORMALISED input")],
     constraint_tsv: Annotated[Path, typer.Option("--constraint-tsv", help="gnomAD constraint TSV(.gz)")],
+    out_tsv: Annotated[Path, typer.Option("--out-tsv")],
+    # Optional parameters after required ones
     on: str = typer.Option("gene_symbol", "--on", help="join key: gene_symbol|transcript"),
     how: str = typer.Option("left", "--how", help="left|inner"),
-    out_tsv: Annotated[Path, typer.Option("--out-tsv")],
     constraint_version: str = typer.Option(None, "--constraint-version")
 ) -> None:
     """
