@@ -43,3 +43,8 @@ vep-filter-consequence-mane \
   --keep-consequence "missense_variant,stop_gained" \
   --mane-only
 ```
+
+**Notes**
+
+--keep-consequence accepts comma-separated terms; matches within multi-terms like A&B.
+--mane-only keeps rows where MANE_SELECT is truthy (yes/true/1/y/t).
