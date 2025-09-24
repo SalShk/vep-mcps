@@ -4,7 +4,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "vep-parser-mcp"
-version = "0.1.1"
+version = "0.1.4"  # <-- bump to match your next tag
 description = "Agent-friendly VEP parsing MCP tools with strict I/O contracts"
 readme = "../README.md"
 authors = [{ name = "Saleh Shekari" }]
@@ -12,8 +12,8 @@ license = { text = "MIT" }
 requires-python = ">=3.11"
 dependencies = [
     "pandas>=2.2.2,<2.3",
-    "typer[all]>=0.9.0",  # COMMA ADDED HERE
-    "click>=8.1.7,<9.0",
+    "typer>=0.12.3,<0.13",       # pin Typer to avoid CLI/Click breakage
+    "click>=8.1.7,<8.2",         # keep Click below 8.2 for Typer compat
     "rich>=13.7,<14",
     "jsonschema>=4.22,<5",
 ]
@@ -24,7 +24,6 @@ vep-normalise-columns       = "vep_parser_mcp.cli.normalise_columns:cli"
 vep-merge-gnomad-constraint = "vep_parser_mcp.cli.merge_gnomad_constraint:cli"
 vep-parsing-overview        = "vep_parser_mcp.cli.parsing_overview:cli"
 vep-prepare-pipeline        = "vep_parser_mcp.cli.prepare_pipeline:cli"
-
 
 [project.optional-dependencies]
 dev = [

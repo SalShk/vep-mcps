@@ -19,6 +19,14 @@ jobs:
         with:
           python-version: "3.12"
 
+      - name: Cache pip
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/pip
+          key: ${{ runner.os }}-pip-${{ hashFiles('parser-mcp/requirements.txt') }}
+          restore-keys: |
+            ${{ runner.os }}-pip-
+
       - name: Install deps (parser-mcp)
         run: |
           python -m pip install -U pip
@@ -26,8 +34,7 @@ jobs:
           pip install -e parser-mcp[dev]
 
       - name: Run tests
-        run: |
-          pytest -q
+        run: pytest -q
 
   docker-build:
     runs-on: ubuntu-latest
@@ -35,7 +42,5 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v4
-
       - name: Build Docker image
-        run: |
-          docker build -t vep-parser-mcp:ci -f parser-mcp/Dockerfile .
+        run: docker build -t vep-parser-mcp:ci -f parser-mcp/Dockerfile .
