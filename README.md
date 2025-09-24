@@ -1,6 +1,6 @@
 # VEP MCP Parser
 
-[![Tests](https://img.shields.io/github/actions/workflow/status/SalShk/vep-mcps/test.yaml?branch=master)](https://github.com/SalShk/vep-mcps/actions/workflows/test.yaml)
+[![Tests](https://github.com/SalShk/vep-mcps/actions/workflows/test.yaml/badge.svg?branch=master)](https://github.com/SalShk/vep-mcps/actions/workflows/test.yaml)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](./LICENSE)
 ![Docker](https://img.shields.io/badge/docker-ready-blue)
 
