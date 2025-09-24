@@ -30,3 +30,15 @@ docker run --rm -v "$PWD:/wd" -w /wd vep-parser-mcp:0.1.0 \
   -i tests/data/tiny.vep.tsv \
   -c tests/data/tiny.constraint.tsv \
   -o parser-mcp/out
+```
+# Commands
+** 1) vep-filter-consequence-mane
+Filter by consequence (and optionally keep only MANE).
+
+```bash
+vep-filter-consequence-mane \
+  -i tests/data/tiny.vep.tsv \
+  -o parser-mcp/out/filtered.tsv \
+  --keep-consequence "missense_variant,stop_gained" \
+  --mane-only
+```
