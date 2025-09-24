@@ -67,7 +67,7 @@ vep-merge-gnomad-constraint \
 # 4) Overview
 vep-parsing-overview -i out/merged.tsv[.gz]
 ```
-# Makefile Shortcuts
+## Makefile Shortcuts
 
 ```bash
 make build     # docker build (vep-parser-mcp:0.1.0)
@@ -76,3 +76,5 @@ make pipeline  # run one-shot pipeline on tiny fixtures
 make overview  # show overview for the merged output
 ```
 
+## Contributing
+**We welcome contributions and collaborations on the open-source framework. Please [open an issue](https://github.com/salshk/GenoAI-Pathogenicity-Engine/issues) to discuss your ideas.**
