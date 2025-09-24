@@ -32,7 +32,8 @@ docker run --rm -v "$PWD:/wd" -w /wd vep-parser-mcp:0.1.0 \
   -o parser-mcp/out
 ```
 # Commands
-** 1) vep-filter-consequence-mane
+**1) vep-filter-consequence-mane**
+
 Filter by consequence (and optionally keep only MANE).
 
 ```bash
