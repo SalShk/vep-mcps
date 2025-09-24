@@ -1,12 +1,18 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "title": "GNOMAD_CONSTRAINT",
+  "$id": "GNOMAD_CONSTRAINT.schema.json",
+  "title": "gnomAD Constraint TSV row",
   "type": "object",
+  "additionalProperties": true,
+  "oneOf": [
+    { "required": ["gene_symbol"] },
+    { "required": ["transcript"] }
+  ],
+  "required": ["OE_LOF_UPPER", "pLI"],
   "properties": {
     "gene_symbol": { "type": "string" },
-    "transcript": { "type": ["string","null"] },
-    "oe_lof_upper": { "type": ["number","string","null"] },
-    "pLI": { "type": ["number","string","null"] }
-  },
-  "required": ["gene_symbol"]
+    "transcript": { "type": "string" },
+    "OE_LOF_UPPER": { "type": "string", "pattern": "^[0-9]*\\.?[0-9]+$" },
+    "pLI": { "type": "string", "pattern": "^[01](\\.\\d+)?$|^0?\\.\\d+$" }
+  }
 }

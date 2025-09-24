@@ -2,6 +2,8 @@ from __future__ import annotations
 
 from pathlib import Path
 from typing import Annotated
+import os
+import sys
 import gzip
 import re
 
@@ -14,17 +16,25 @@ app = typer.Typer(add_completion=False)
 # e.g. "NM_000001.1:c.100A>G" → "NM_000001.1"
 NM_RE = re.compile(r"\b(NM_\d+(?:\.\d+)?)")
 
-def _open_read(path: Path):
-    if str(path).endswith(".gz"):
-        return gzip.open(path, "rt", encoding="utf-8")
-    return open(path, "r", encoding="utf-8")
+# ---------------- I/O helpers: stdin/stdout + .gz ----------------
+def _open_read_any(path: Path | str):
+    p = str(path)
+    if p == "-" or p == "":
+        return sys.stdin
+    if p.endswith(".gz"):
+        return gzip.open(p, "rt", encoding="utf-8")
+    return open(p, "r", encoding="utf-8")
 
-def _open_write(path: Path):
-    path.parent.mkdir(parents=True, exist_ok=True)
-    if str(path).endswith(".gz"):
-        return gzip.open(path, "wt", encoding="utf-8")
-    return open(path, "w", encoding="utf-8")
+def _open_write_any(path: Path | str):
+    p = str(path)
+    if p == "-" or p == "":
+        return sys.stdout
+    os.makedirs(str(Path(p).parent), exist_ok=True)
+    if p.endswith(".gz"):
+        return gzip.open(p, "wt", encoding="utf-8")
+    return open(p, "w", encoding="utf-8")
 
+# ---------------- small helpers ----------------
 def infer_transcript_from_hgvs(hgvs: str | None) -> str | None:
     if hgvs is None or str(hgvs).strip() == "":
         return None
@@ -39,8 +49,8 @@ def load_tx2gene_map(path: str | None) -> dict[str, str]:
     for c in ("Transcript", "Gene_symbol"):
         if c not in df.columns:
             raise ValueError("tx2gene file must have columns: Transcript, Gene_symbol")
-    df["Transcript"] = df["Transcript"].str.strip()
-    df["Gene_symbol"] = df["Gene_symbol"].str.upper().str.strip()
+    df["Transcript"] = df["Transcript"].astype(str).str.strip()
+    df["Gene_symbol"] = df["Gene_symbol"].astype(str).str.upper().str.strip()
     return dict(zip(df["Transcript"], df["Gene_symbol"]))
 
 @app.command()
@@ -48,19 +58,17 @@ def main(
     in_tsv: Annotated[
         Path,
         typer.Option(
-            "--in-tsv",
-            "-i",
-            help="Input TSV file from VEP (post-filter).",
-            exists=True,
+            "--in-tsv", "-i",
+            help="Input TSV file from VEP (post-filter). Use '-' for stdin.",
+            exists=False,   # allow '-'
             readable=True,
         ),
     ],
     out_tsv: Annotated[
         Path,
         typer.Option(
-            "--out-tsv",
-            "-o",
-            help="Output TSV with normalised columns.",
+            "--out-tsv", "-o",
+            help="Output TSV with normalised columns. Use '-' for stdout.",
             writable=True,
         ),
     ],
@@ -84,7 +92,7 @@ def main(
     """Normalise VEP TSV columns and populate Gene_symbol/Transcript when possible."""
     try:
         print(f"[debug] Reading input: {in_tsv}")
-        with _open_read(in_tsv) as fin:
+        with _open_read_any(in_tsv) as fin:
             df = pd.read_csv(fin, sep="\t", dtype=str, low_memory=False).fillna("")
 
         print(f"[debug] Original columns: {list(df.columns)}")
@@ -96,7 +104,7 @@ def main(
             "Gene": "Gene_symbol",
             "Gene_name": "Gene_symbol",
             "symbol": "Gene_symbol",
-            "GENE_PHENO": "Gene_pheno",  # keep for reference
+            "GENE_PHENO": "Gene_pheno",  # keep original info for reference
 
             # Transcript synonyms → Transcript
             "Feature": "Transcript",
@@ -110,7 +118,13 @@ def main(
             "RSID": "dbSNP",
             "dbsnp": "dbSNP",
             "rs_dbSNP": "dbSNP",
+
+            # MANE variants → MANE_SELECT (normalize name)
+            "MANE_select": "MANE_SELECT",
+            "mane_select": "MANE_SELECT",
+            "MANE": "MANE_SELECT",
         }
+
         mapping_to_apply = {k: v for k, v in column_mapping.items() if k in df.columns}
         if mapping_to_apply:
             df = df.rename(columns=mapping_to_apply)
@@ -124,23 +138,25 @@ def main(
         if "Transcript" not in df.columns:
             df["Transcript"] = ""
 
-        # If user provided a specific gene column, use it
+        # If user provided a specific gene column, use it (only where non-empty)
         if gene_column and gene_column in df.columns:
-            df["Gene_symbol"] = df[gene_column].astype(str)
+            src = df[gene_column].astype(str)
+            df.loc[src.str.strip() != "", "Gene_symbol"] = src
 
         # Infer Transcript from clinvar_hgvs if we still don't have any
-        if (df["Transcript"] == "").all() and "clinvar_hgvs" in df.columns:
+        if (df["Transcript"].str.strip() == "").all() and "clinvar_hgvs" in df.columns:
             df["Transcript"] = df["clinvar_hgvs"].apply(infer_transcript_from_hgvs).fillna("")
 
         # If Gene_symbol still empty, try transcript→gene map
         tx2gene_map = load_tx2gene_map(tx2gene)
-        if tx2gene_map and (df["Gene_symbol"] == "").any():
-            df.loc[df["Gene_symbol"] == "", "Gene_symbol"] = (
-                df.loc[df["Gene_symbol"] == "", "Transcript"].map(tx2gene_map).fillna("")
-            )
+        if tx2gene_map and (df["Gene_symbol"].str.strip() == "").any():
+            mask = df["Gene_symbol"].str.strip() == ""
+            df.loc[mask, "Gene_symbol"] = df.loc[mask, "Transcript"].map(tx2gene_map).fillna("")
 
         # Final standardisation
-        df["Gene_symbol"] = df["Gene_symbol"].astype(str).str.upper().str.strip().replace({"": "UNKNOWN"})
+        df["Gene_symbol"] = (
+            df["Gene_symbol"].astype(str).str.upper().str.strip().replace({"": "UNKNOWN"})
+        )
         df["Transcript"] = df["Transcript"].astype(str).str.strip()
 
         # Add metadata if provided
@@ -149,16 +165,23 @@ def main(
         if plugins_version:
             df["plugins_version"] = plugins_version
 
+        # Keep key columns handy near the front (do not reorder everything else)
+        front = [c for c in ["variant_id", "Gene_symbol", "Transcript"] if c in df.columns]
+        others = [c for c in df.columns if c not in front]
+        df = df[front + others]
+
         # Write out
-        with _open_write(out_tsv) as fout:
+        with _open_write_any(out_tsv) as fout:
             df.to_csv(fout, sep="\t", index=False)
 
         print(f"[green]Normalized columns and wrote {out_tsv} (rows: {len(df)})")
-        unk = (df["Gene_symbol"] == "UNKNOWN").sum()
+        unk = int((df["Gene_symbol"] == "UNKNOWN").sum())
         if unk:
-            print("[yellow][normalise] WARNING: "
-                  f"{unk} rows have Gene_symbol=UNKNOWN. "
-                  "Provide --gene-column SYMBOL or a --tx2gene map for gene-level merge.")
+            print(
+                "[yellow][normalise] WARNING: "
+                f"{unk} rows have Gene_symbol=UNKNOWN. "
+                "Provide --gene-column SYMBOL or a --tx2gene map for gene-level merge."
+            )
 
     except Exception as e:
         print(f"[red]Error: {e}")
