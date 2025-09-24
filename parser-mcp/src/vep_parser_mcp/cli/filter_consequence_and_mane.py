@@ -1,14 +1,13 @@
 from __future__ import annotations
+
 from pathlib import Path
 from typing import Annotated
+
 import pandas as pd
 import typer
 from rich import print
-import gzip
-import sys
-import os
 
-app = typer.Typer()
+app = typer.Typer(help="Filter VEP TSV by consequence and optionally MANE select transcripts.")
 
 @app.command()
 def main(
@@ -54,12 +53,7 @@ def main(
     """Filter VEP TSV by consequence and optionally MANE select transcripts."""
     try:
         print(f"[debug] Reading input: {in_tsv}")
-        
-        if str(in_tsv).endswith('.gz'):
-            with gzip.open(in_tsv, 'rt') as f:
-                df = pd.read_csv(f, sep="\t", dtype=str, low_memory=False)
-        else:
-            df = pd.read_csv(in_tsv, sep="\t", dtype=str, low_memory=False)
+        df = pd.read_csv(in_tsv, sep="\t", dtype=str, low_memory=False)
 
         cons_col = "Consequence"
         mane_col = "MANE_select"
