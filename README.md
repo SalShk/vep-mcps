@@ -77,4 +77,4 @@ make overview  # show overview for the merged output
 ```
 
 ## Contributing
-**We welcome contributions and collaborations on the open-source framework. Please [open an issue](https://github.com/salshk/GenoAI-Pathogenicity-Engine/issues) to discuss your ideas.**
+**We welcome contributions and collaborations on the open-source framework. Please [open an issue](https://github.com/salshk/vep-mcps/issues) to discuss your ideas.**
