@@ -4,7 +4,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "vep-parser-mcp"
-version = "0.1.0"
+version = "0.1.1"
 description = "Agent-friendly VEP parsing MCP tools with strict I/O contracts"
 readme = "../README.md"
 authors = [{ name = "Saleh Shekari" }]
