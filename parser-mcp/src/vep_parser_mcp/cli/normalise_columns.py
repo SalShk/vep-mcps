@@ -188,4 +188,9 @@ def main(
         raise typer.Exit(code=1)
 
 if __name__ == "__main__":
+    # Support: python -m vep_parser_mcp.cli.filter_consequence_and_mane --in-tsv ...
+    # Typer expects the subcommand name ("main"). If options come first, insert it.
+    import sys
+    if len(sys.argv) > 1 and sys.argv[1].startswith("-"):
+        sys.argv.insert(1, "main")
     app()
