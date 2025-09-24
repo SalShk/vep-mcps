@@ -2,12 +2,16 @@ FROM python:3.12-slim
 
 WORKDIR /app
 
-# Copy the project files
-COPY parser-mcp/pyproject.toml .
+# Copy the entire project directory into the container
+COPY parser-mcp ./parser-mcp/
 COPY README.md .
-COPY parser-mcp/src/vep_parser_mcp/ ./src/vep_parser_mcp/
+COPY requirements.txt .
+COPY schemas ./schemas/
+COPY tests ./tests/
 
-# Install the package and its dependencies
+# Set the working directory to the package's location and install it
+WORKDIR /app/parser-mcp
 RUN pip install --no-cache-dir .[dev]
 
+# Set the default command to start a shell when the container runs
 CMD ["bash"]
