@@ -1,41 +1,33 @@
 #!/usr/bin/env python3
 from __future__ import annotations
-import os
-import shlex
-import subprocess
-from typing import List
+import os, sys, shlex, subprocess, re
 
-import typer
-from rich.console import Console
+def _print_version_and_exit() -> int:
+    # Run `vep --help` and parse "ensembl-vep : X.Y"
+    proc = subprocess.run(["vep", "--help"], capture_output=True, text=True)
+    out = proc.stdout + proc.stderr
+    m = re.search(r"ensembl-vep\s*:\s*([0-9.]+)", out)
+    if m:
+        print(m.group(1))
+        return 0
+    # Fallback: just show the first ~20 lines of help
+    sys.stderr.write(out.splitlines(True)[:20] and "".join(out.splitlines(True)[:20]))
+    return 0 if proc.returncode == 0 else proc.returncode
 
-# Allow unknown options & extra args so we can forward everything to `vep`
-app = typer.Typer(
-    add_completion=False,
-    context_settings={"ignore_unknown_options": True, "allow_extra_args": True},
-)
-console = Console()
+def main() -> int:
+    # If user asked for --version, emulate it
+    if any(a in ("--version", "-V") for a in sys.argv[1:]):
+        return _print_version_and_exit()
 
-
-@app.callback()
-def main(ctx: typer.Context, args: List[str] = typer.Argument(None)) -> None:
-    """
-    Thin wrapper around `vep` inside the container.
-    Everything after `vep-runner ...` is forwarded to `vep`.
-    If nothing is provided, defaults to `vep --help`.
-    """
-    env_defaults = os.environ.get("VEP_OPTS", "")
-    argv = ["vep"]
-    if env_defaults.strip():
-        argv += shlex.split(env_defaults)
-
-    argv += (args if args else ["--help"])
-
-    console.log("[blue]$[/blue] " + " ".join(shlex.quote(a) for a in argv))
+    # Otherwise pass everything straight to VEP (+ optional defaults)
+    env_opts = os.environ.get("VEP_OPTS", "")
+    argv = ["vep"] + (shlex.split(env_opts) if env_opts else []) + sys.argv[1:]
+    sys.stderr.write("$ " + " ".join(shlex.quote(a) for a in argv) + "\n")
+    sys.stderr.flush()
     try:
-        subprocess.run(argv, check=True)
-    except subprocess.CalledProcessError as e:
-        raise typer.Exit(e.returncode)
-
+        return subprocess.call(argv)
+    except KeyboardInterrupt:
+        return 130
 
 if __name__ == "__main__":
-    app()
+    sys.exit(main())
